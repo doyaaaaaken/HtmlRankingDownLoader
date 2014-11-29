@@ -1,4 +1,6 @@
 <?php
+// header("Content-Type: text/html; charset=SHIFT-JIS");
+
 //PHP Simple HTML DOM Parser Manualの読み込み
 require_once 'lib/simple_html_dom.php';
 
@@ -46,7 +48,7 @@ class WeeklyBookData{
 	private $author;//著者
 	private $company;//出版社
 	private $publishDate;//発売日
-	private $price;//価格
+	private $price;//価格(税込み)
 	private $publishNum;//推定売上部数
 
 	public function __construct($date, $rank, $title, $author, $company, $publishDate, $price, $publishNum){
@@ -54,10 +56,10 @@ class WeeklyBookData{
 		$this->rank = $rank;
 		$this->title = $title;
 		$this->author = $author;
-		$this->company = $company;
-		$this->publishDate = $publishDate;
-		$this->price = $price;
-		$this->publishNum = $publishNum;
+		$this->company = str_replace(encodeToSJIS("出版社："), "", $company);
+		$this->publishDate = str_replace(encodeToSJIS("発売日："), "", $publishDate);
+		$this->price = str_replace(array(encodeToSJIS("価格："), encodeToSJIS("円(税込)")), "", $price);
+		$this->publishNum = str_replace(array(encodeToSJIS("推定売上部数："), encodeToSJIS(","), encodeToSJIS("部")), "", $publishNum);
 	}
 
 	//全データをCSV形式の1行にして出力する
@@ -73,8 +75,10 @@ function outputCsvData($WeeklyBookDatas){
 		$fileName = "result.csv";
 		$file = fopen($fileName, 'w');
 
-		fwrite($file, "ランキング週,ランキング,タイトル,著者,出版社,発売日,価格,推定売上部数\n");//1行目に項目行を出力
-		foreach ($WeeklyBookDatas as $WeeklyBookData) {//2行目以下はデータを出力
+		//1行目に項目行を出力
+		fwrite($file, mb_convert_encoding("ランキング週,ランキング,タイトル,著者,出版社,発売日,価格(税込み）,推定売上部数\n", "SJIS", "UTF-8"));
+		//2行目以下はデータを出力
+		foreach ($WeeklyBookDatas as $WeeklyBookData) {
 			fwrite($file, $WeeklyBookData->getCsvFormattedData());
 		}
 
@@ -83,4 +87,10 @@ function outputCsvData($WeeklyBookDatas){
 	}catch(Exception $e){
 		return "CSVファイル入出力時に例外が発生しました";
 	}
+}
+
+//UTF-8  ⇒  SHIFT-JIS　 に文字コード変換
+//＊本PHPファイルはUTF-8だが、Excelに出力する値などはShift-JISにする必要があるのでその際使用する
+function encodeToSJIS($str){
+	return mb_convert_encoding($str, "SJIS", "UTF-8");
 }
