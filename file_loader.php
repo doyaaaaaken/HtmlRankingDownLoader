@@ -5,37 +5,53 @@
 require_once 'lib/simple_html_dom.php';
 
 //対象URL指定
-$html = file_get_html('http://www.oricon.co.jp/rank/obb/w/2014-12-01/p/2/');
+define("URL_PRE", "http://www.oricon.co.jp/rank/obb/w/");
+define("URL_MID", "/p/");
+define("URL_SUF", "/");
 
-$rank = 1;
+//データ取得する週（何日付けのデータか？を記す）
 $date = "2014-12-01";
-$WeeklyBookDatas = array();
 
 //DOMをパースし必要なデータを変数に代入
-if($html != ""){
-	foreach($html->find('div[class=inner] div[class=wrap-text]') as $book){
-		
-		$title = $book->find('h2', 0)->plaintext;
-		$author = $book->find('p', 0)->plaintext;
+$WeeklyBookDatas = getWeeklyBookDatas($date);
 
-		$elems = array();
-		foreach($book->find('ul', 0)->find('li') as $elem){
-			$elems[] = $elem->plaintext;
+//CSVデータ出力＆結果メッセージ出力
+outputCsvData($WeeklyBookDatas);
+echo "******** Success!! **********";
+
+///////////////////////////
+///// 以下クラス・メソッド群 /////
+///////////////////////////
+
+//引数指定された日にち付けのURLの売上TOP30の週次データを取得する
+function getWeeklyBookDatas($date){
+	$WeeklyBookDatas = array();
+	
+	for ($pageNum=1; $pageNum<=3 ; $pageNum++) { //1ページにつき10タイトルしか載っていないため、3ページ見る必要がある
+		$html = file_get_html(URL_PRE.$date.URL_MID.$pageNum.URL_SUF);
+
+		if($html != ""){
+			$rank = $pageNum * 10 - 9;
+
+			foreach($html->find('div[class=inner] div[class=wrap-text]') as $book){
+
+				$title = $book->find('h2', 0)->plaintext;
+				$author = $book->find('p', 0)->plaintext;
+
+				$elems = array();
+				foreach($book->find('ul', 0)->find('li') as $elem){
+					$elems[] = $elem->plaintext;
+				}
+
+				array_push($WeeklyBookDatas ,new WeeklyBookData(
+					$date, $rank++, $title, $author, $elems[0], $elems[1], $elems[2], $elems[3]));
+			}
+		}else {
+			throw new Exception("**********Failure!!  Can't get file!!***********");
 		}
-
-		array_push($WeeklyBookDatas ,new WeeklyBookData(
-			$date, $rank++, $title, $author, $elems[0], $elems[1], $elems[2], $elems[3]));
 	}
-	$info_msg = "File exist!!";
-
-}else {
-	$info_msg = "Failure!!  Can't get file!!";
+	return $WeeklyBookDatas;
 }
-
-//データ＆結果メッセージ出力
-$outputErrorInfo = outputCsvData($WeeklyBookDatas);
-echo $info_msg."\n".$outputErrorInfo;
-
 
 
 /**
@@ -78,16 +94,16 @@ function outputCsvData($WeeklyBookDatas){
 		//1行目に項目行を出力
 		fwrite($file, mb_convert_encoding("ランキング週,ランキング,タイトル,著者,出版社,発売日,価格(税込み）,推定売上部数\n", "SJIS", "UTF-8"));
 		//2行目以下はデータを出力
-		foreach ($WeeklyBookDatas as $WeeklyBookData) {
-			fwrite($file, $WeeklyBookData->getCsvFormattedData());
+			foreach ($WeeklyBookDatas as $WeeklyBookData) {
+				fwrite($file, $WeeklyBookData->getCsvFormattedData());
+			}
+
+			fclose($file);
+
+		}catch(Exception $e){
+			throw new Exception("CSVファイル入出力時に例外が発生しました");
 		}
-
-		fclose($file);
-
-	}catch(Exception $e){
-		return "CSVファイル入出力時に例外が発生しました";
 	}
-}
 
 //UTF-8  ⇒  SHIFT-JIS　 に文字コード変換
 //＊本PHPファイルはUTF-8だが、Excelに出力する値などはShift-JISにする必要があるのでその際使用する
