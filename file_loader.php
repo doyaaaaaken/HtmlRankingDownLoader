@@ -15,6 +15,8 @@ if($html != ""){
 		
 		$title = $book->find('h2', 0)->plaintext;
 		$author = $book->find('p', 0)->plaintext;
+
+		$elems = array();
 		foreach($book->find('ul', 0)->find('li') as $elem){
 			$elems[] = $elem->plaintext;
 		}
@@ -29,8 +31,8 @@ if($html != ""){
 }
 
 //データ＆結果メッセージ出力
-var_dump($WeeklyBookDatas);
-echo $info_msg;
+$outputErrorInfo = outputCsvData($WeeklyBookDatas);
+echo $info_msg."\n".$outputErrorInfo;
 
 
 
@@ -56,5 +58,29 @@ class WeeklyBookData{
 		$this->publishDate = $publishDate;
 		$this->price = $price;
 		$this->publishNum = $publishNum;
+	}
+
+	//全データをCSV形式の1行にして出力する
+	public function getCsvFormattedData(){
+		echo $this->date.",".$this->rank.",".$this->title.",".$this->author.",".$this->company.",".$this->publishDate.",".$this->price.",".$this->publishNum."\n";
+		return $this->date.",".$this->rank.",".$this->title.",".$this->author.",".$this->company.",".$this->publishDate.",".$this->price.",".$this->publishNum."\n";
+	}
+}
+
+//週次データ群をCSVファイルとして出力する
+function outputCsvData($WeeklyBookDatas){
+	try{
+		$fileName = "result.csv";
+		$file = fopen($fileName, 'w');
+
+		fwrite($file, "ランキング週,ランキング,タイトル,著者,出版社,発売日,価格,推定売上部数\n");//1行目に項目行を出力
+		foreach ($WeeklyBookDatas as $WeeklyBookData) {//2行目以下はデータを出力
+			fwrite($file, $WeeklyBookData->getCsvFormattedData());
+		}
+
+		fclose($file);
+
+	}catch(Exception $e){
+		return "CSVファイル入出力時に例外が発生しました";
 	}
 }
