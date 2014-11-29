@@ -99,9 +99,9 @@ class WeeklyBookData{
 	public function __construct($date, $rank, $title, $author, $company, $publishDate, $price, $publishNum){
 		$this->date = $date;
 		$this->rank = $rank;
-		$this->title = $title;
-		$this->author = $author;
-		$this->company = str_replace(encodeToSJIS("出版社："), "", $company);
+		$this->title = str_replace(encodeToSJIS(","), "", $title);
+		$this->author = str_replace(encodeToSJIS(","), "", $author);
+		$this->company = str_replace(array(encodeToSJIS("出版社："), encodeToSJIS(",")), "", $company);
 		$this->publishDate = str_replace(encodeToSJIS("発売日："), "", $publishDate);
 		$this->price = str_replace(array(encodeToSJIS("価格："), encodeToSJIS("円(税込)")), "", $price);
 		$this->publishNum = str_replace(array(encodeToSJIS("推定売上部数："), encodeToSJIS(","), encodeToSJIS("部")), "", $publishNum);
